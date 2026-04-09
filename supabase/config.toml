@@ -1,0 +1,28 @@
+project_id = "qamhtgnutgjzogxkmyry"
+
+[functions.setup-admin]
+verify_jwt = false
+
+[functions.create-client]
+verify_jwt = true
+
+[functions.delete-client]
+verify_jwt = true
+
+[functions.download-album]
+verify_jwt = false
+
+[functions.send-contact-email]
+verify_jwt = false
+
+[functions.validate-share-token]
+verify_jwt = false
+
+[functions.process-upload]
+verify_jwt = true
+
+[functions.backfill-variants]
+verify_jwt = true
+
+[functions.update-client]
+verify_jwt = true

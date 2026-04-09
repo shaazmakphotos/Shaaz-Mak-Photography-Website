@@ -1,0 +1,162 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Raleway:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* Shaaz Mak Photography - Light & Airy Theme */
+    --background: 30 30% 98%;
+    --foreground: 25 5% 23%;
+    
+    --card: 30 20% 97%;
+    --card-foreground: 25 5% 23%;
+    
+    --popover: 30 30% 98%;
+    --popover-foreground: 25 5% 23%;
+    
+    --primary: 42 50% 59%;
+    --primary-foreground: 30 30% 98%;
+    
+    --secondary: 30 15% 90%;
+    --secondary-foreground: 25 5% 23%;
+    
+    --muted: 30 15% 93%;
+    --muted-foreground: 25 5% 45%;
+    
+    --accent: 42 45% 48%;
+    --accent-foreground: 30 30% 98%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 30 15% 88%;
+    --input: 30 15% 88%;
+    --ring: 42 50% 59%;
+    
+    --radius: 0.5rem;
+    
+    --gold-light: 42 55% 70%;
+    --gold-glow: 42 60% 80%;
+    --cream: 35 35% 95%;
+    
+    --sidebar-background: 30 30% 98%;
+    --sidebar-foreground: 25 5% 23%;
+    --sidebar-primary: 42 50% 59%;
+    --sidebar-primary-foreground: 30 30% 98%;
+    --sidebar-accent: 30 15% 93%;
+    --sidebar-accent-foreground: 25 5% 23%;
+    --sidebar-border: 30 15% 88%;
+    --sidebar-ring: 42 50% 59%;
+  }
+
+  .dark {
+    --background: 25 10% 10%;
+    --foreground: 30 20% 95%;
+    
+    --card: 25 10% 12%;
+    --card-foreground: 30 20% 95%;
+    
+    --popover: 25 10% 10%;
+    --popover-foreground: 30 20% 95%;
+    
+    --primary: 42 50% 59%;
+    --primary-foreground: 25 10% 10%;
+    
+    --secondary: 25 10% 18%;
+    --secondary-foreground: 30 20% 95%;
+    
+    --muted: 25 10% 20%;
+    --muted-foreground: 30 15% 65%;
+    
+    --accent: 42 50% 65%;
+    --accent-foreground: 25 10% 10%;
+    
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 25 10% 20%;
+    --input: 25 10% 20%;
+    --ring: 42 50% 59%;
+    
+    --gold-light: 42 55% 70%;
+    --gold-glow: 42 60% 80%;
+    --cream: 25 10% 15%;
+    
+    --sidebar-background: 25 10% 10%;
+    --sidebar-foreground: 30 20% 95%;
+    --sidebar-primary: 42 50% 59%;
+    --sidebar-primary-foreground: 25 10% 10%;
+    --sidebar-accent: 25 10% 18%;
+    --sidebar-accent-foreground: 30 20% 95%;
+    --sidebar-border: 25 10% 20%;
+    --sidebar-ring: 42 50% 59%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Raleway', sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Cormorant Garamond', serif;
+    @apply font-medium tracking-wide;
+  }
+}
+
+@layer components {
+  .hover-lift {
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px -15px hsl(25 5% 23% / 0.12);
+  }
+  
+  .image-hover {
+    @apply transition-transform duration-500 ease-out;
+  }
+  
+  .image-hover:hover {
+    transform: scale(1.03);
+  }
+  
+  .fade-in-up {
+    animation: fadeInUp 0.8s ease-out forwards;
+    opacity: 0;
+  }
+  
+  .stagger-1 { animation-delay: 0.1s; }
+  .stagger-2 { animation-delay: 0.2s; }
+  .stagger-3 { animation-delay: 0.3s; }
+  .stagger-4 { animation-delay: 0.4s; }
+}
+
+@layer utilities {
+  .font-serif {
+    font-family: 'Cormorant Garamond', serif;
+  }
+  
+  .font-sans {
+    font-family: 'Raleway', sans-serif;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

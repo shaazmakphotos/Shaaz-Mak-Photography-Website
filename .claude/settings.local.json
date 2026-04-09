@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(brew install:*)",
+      "Bash(npx --yes sharp-cli@5.1.0 -i 'src/assets/hero/hero-*.jpg' -o public/hero --format webp --optimise resize 1920 --withoutEnlargement)",
+      "Bash(npx tsc:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
