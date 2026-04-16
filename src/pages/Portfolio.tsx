@@ -8,7 +8,7 @@ import { Lightbox } from "@/components/portfolio/Lightbox";
 import { supabase } from "@/integrations/supabase/client";
 import { cdn, srcset } from "@/lib/cdn";
 
-const categories = ["All", "Weddings", "Graduations", "Events"];
+const categories = ["All", "Weddings", "Graduations", "Events", "Portraits"];
 
 interface PortfolioPhoto {
   id: string;
