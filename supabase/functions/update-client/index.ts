@@ -43,10 +43,12 @@ Deno.serve(async (req) => {
     if (typeof fullName === "string" && fullName.trim()) profilePatch.full_name = fullName.trim();
     if (typeof username === "string" && username.trim()) {
       // Username uniqueness check, ignoring the row that belongs to this user.
+      // Case-insensitive — login is case-insensitive, so "London26" and "london26"
+      // must be treated as the same name.
       const { data: clash } = await supabase
         .from("profiles")
         .select("user_id")
-        .eq("username", username.trim())
+        .ilike("username", username.trim())
         .neq("user_id", userId)
         .maybeSingle();
       if (clash) return json({ error: "Username already taken" }, 400);

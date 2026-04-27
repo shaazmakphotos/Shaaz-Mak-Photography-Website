@@ -63,11 +63,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check if username is already taken
+    // Check if username is already taken (case-insensitive — login is case-insensitive,
+    // so "London26" and "london26" must be treated as the same name to prevent collisions).
     const { data: existingUser } = await supabaseAdmin
       .from('profiles')
       .select('id')
-      .eq('username', username)
+      .ilike('username', username)
       .maybeSingle()
 
     if (existingUser) {
