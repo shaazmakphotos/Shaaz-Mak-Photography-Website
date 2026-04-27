@@ -90,10 +90,6 @@ export default function SharedAlbum() {
     const measured = measuredDims[photo.id];
     return {
       src: cdn(photo.thumbnail_url || photo.url),
-      srcSet: srcset(
-        [photo.thumbnail_url, 480],
-        [photo.preview_url, 1600],
-      ),
       width:  photo.width  || measured?.w || 1500,
       height: photo.height || measured?.h || 1000,
       alt: photo.title || "Photo",

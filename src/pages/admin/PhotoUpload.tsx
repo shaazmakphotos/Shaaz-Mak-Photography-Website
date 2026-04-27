@@ -264,10 +264,6 @@ export function PhotoUpload() {
   // runtime probe and no layout shift.
   const albumPhotos = photos.map((photo, index) => ({
     src: cdn(photo.thumbnail_url || photo.url),
-    srcSet: srcset(
-      [photo.thumbnail_url, 480],
-      [photo.preview_url, 1600],
-    ),
     width: photo.width || 1000,
     height: photo.height || 1000,
     alt: photo.title || "Photo",

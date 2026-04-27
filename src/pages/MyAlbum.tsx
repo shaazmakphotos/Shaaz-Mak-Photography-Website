@@ -205,10 +205,6 @@ export default function MyAlbum() {
     const measured = measuredDims[img.id];
     return {
       src: cdn(img.thumbnail_url || img.url),
-      srcSet: srcset(
-        [img.thumbnail_url, 480],
-        [img.preview_url, 1600],
-      ),
       width:  img.width  || measured?.w || 1500,
       height: img.height || measured?.h || 1000,
       alt: img.title || "Photo",
