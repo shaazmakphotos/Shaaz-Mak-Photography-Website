@@ -38,11 +38,27 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      // Look up email by username
-      const { data: email, error: lookupError } = await supabase
-        .rpc('get_email_by_username', { _username: formData.username });
+      // Username lookup is exact-match in the database. Until the DB function
+      // is updated to use LOWER(), we try a handful of common case variations
+      // here so users can type their username however they like (e.g.
+      // "London26" / "london26" / "LONDON26" all resolve the same).
+      const raw = formData.username.trim();
+      const variations = Array.from(new Set([
+        raw,
+        raw.toLowerCase(),
+        raw.toUpperCase(),
+        // Title Case: first char upper, rest lower — covers "London26"-style names
+        raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase(),
+      ]));
 
-      if (lookupError || !email) {
+      let email: string | null = null;
+      for (const candidate of variations) {
+        const { data } = await supabase
+          .rpc('get_email_by_username', { _username: candidate });
+        if (data) { email = data; break; }
+      }
+
+      if (!email) {
         throw new Error("Invalid username or password");
       }
 
