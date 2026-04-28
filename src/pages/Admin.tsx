@@ -23,6 +23,7 @@ export default function Admin() {
   const { toast } = useToast();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [isReprocessing, setIsReprocessing] = useState(false);
+  const [myUsername, setMyUsername] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -35,6 +36,14 @@ export default function Admin() {
   useEffect(() => {
     if (user && isAdmin) {
       loadStats();
+      // Pull the admin's own username from profiles so it's visible on screen.
+      // Useful for remembering what to log in with.
+      supabase
+        .from("profiles")
+        .select("username")
+        .eq("user_id", user.id)
+        .maybeSingle()
+        .then(({ data }) => setMyUsername(data?.username ?? null));
     }
   }, [user, isAdmin]);
 
@@ -104,7 +113,18 @@ export default function Admin() {
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-serif font-medium">Admin Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Shaaz Mak Photography</p>
+            <p className="text-sm text-muted-foreground">
+              Shaaz Mak Photography
+              {user?.email && (
+                <>
+                  {" · "}
+                  Logged in as <span className="font-medium">{user.email}</span>
+                  {myUsername && (
+                    <> (username: <span className="font-medium">{myUsername}</span>)</>
+                  )}
+                </>
+              )}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Button

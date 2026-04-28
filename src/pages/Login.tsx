@@ -158,6 +158,33 @@ export default function Login() {
               >
                 {isLoading ? "Please wait..." : "Sign In"}
               </Button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const email = window.prompt(
+                      "Enter the email address on your account. We'll send a password reset link."
+                    );
+                    if (!email) return;
+                    const { error } = await supabase.auth.resetPasswordForEmail(
+                      email.trim(),
+                      { redirectTo: `${window.location.origin}/reset-password` }
+                    );
+                    if (error) {
+                      toast({ title: "Error", description: error.message, variant: "destructive" });
+                    } else {
+                      toast({
+                        title: "Check your email",
+                        description: "If an account exists for that email, a reset link is on its way.",
+                      });
+                    }
+                  }}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
             </form>
           </div>
         </div>

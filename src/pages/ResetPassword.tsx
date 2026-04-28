@@ -18,22 +18,36 @@ export default function ResetPassword() {
   const [hasToken, setHasToken] = useState(false);
 
   useEffect(() => {
-    // Check if we have a recovery token in the URL
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get("access_token");
-    const type = hashParams.get("type");
+    // By the time we mount, Supabase has already consumed the recovery hash
+    // from the URL and turned it into a session. So we just check: is there
+    // an active session? If yes, the user came in via a recovery link and
+    // can set a new password. If no, they hit this page directly with no
+    // pending reset — bounce them to login.
+    let cancelled = false;
 
-    if (accessToken && type === "recovery") {
-      setHasToken(true);
-    } else {
-      // No recovery token, redirect to login
-      toast({
-        title: "Invalid Reset Link",
-        description: "Please request a new password reset link.",
-        variant: "destructive",
-      });
-      navigate("/login");
-    }
+    const check = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (session) {
+        setHasToken(true);
+      } else {
+        toast({
+          title: "Invalid Reset Link",
+          description: "Please request a new password reset link.",
+          variant: "destructive",
+        });
+        navigate("/login");
+      }
+    };
+
+    // Wait a tick — if the user just clicked an email link, Supabase may
+    // still be in the middle of processing the hash. Give it a beat.
+    const timer = setTimeout(check, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
