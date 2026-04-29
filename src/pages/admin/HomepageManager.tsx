@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Pencil, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,51 @@ export function HomepageManager() {
   const [pendingUploads, setPendingUploads] = useState<ProcessedUpload[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // Auto-scroll the page while dragging near the top or bottom viewport edge.
+  const rafRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (draggedIndex === null) return;
+
+    const onDragOver = (e: DragEvent) => {
+      const ZONE = 80;
+      const { clientY } = e;
+      const { innerHeight } = window;
+
+      let speed = 0;
+      if (clientY < ZONE) {
+        speed = -Math.round((ZONE - clientY) / 8);
+      } else if (clientY > innerHeight - ZONE) {
+        speed = Math.round((clientY - (innerHeight - ZONE)) / 8);
+      }
+
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      if (speed !== 0) {
+        const step = () => {
+          window.scrollBy(0, speed);
+          rafRef.current = requestAnimationFrame(step);
+        };
+        rafRef.current = requestAnimationFrame(step);
+      }
+    };
+
+    const onDragEnd = () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("dragend", onDragEnd);
+    window.addEventListener("drop", onDragEnd);
+    return () => {
+      window.removeEventListener("dragover", onDragOver);
+      window.removeEventListener("dragend", onDragEnd);
+      window.removeEventListener("drop", onDragEnd);
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [draggedIndex]);
 
   const { data: photos = [], isLoading } = useQuery({
     queryKey: ["homepage-photos"],

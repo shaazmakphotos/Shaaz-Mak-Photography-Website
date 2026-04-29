@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Pencil, GripVertical, CheckSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -78,6 +78,54 @@ export function PortfolioManager() {
   // --- Drag state ---
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // Auto-scroll the page while dragging near the top or bottom viewport edge.
+  // HTML5 native drag-and-drop never scrolls the window itself, so we do it
+  // manually: listen to dragover on the window and nudge scrollY when the
+  // pointer is within 80px of an edge. Speed is proportional to how close.
+  const rafRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (draggedIndex === null) return;
+
+    const onDragOver = (e: DragEvent) => {
+      const ZONE = 80; // px from edge that triggers scrolling
+      const { clientY } = e;
+      const { innerHeight } = window;
+
+      let speed = 0;
+      if (clientY < ZONE) {
+        speed = -Math.round((ZONE - clientY) / 8); // scroll up
+      } else if (clientY > innerHeight - ZONE) {
+        speed = Math.round((clientY - (innerHeight - ZONE)) / 8); // scroll down
+      }
+
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      if (speed !== 0) {
+        const step = () => {
+          window.scrollBy(0, speed);
+          rafRef.current = requestAnimationFrame(step);
+        };
+        rafRef.current = requestAnimationFrame(step);
+      }
+    };
+
+    const onDragEnd = () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("dragend", onDragEnd);
+    window.addEventListener("drop", onDragEnd);
+    return () => {
+      window.removeEventListener("dragover", onDragOver);
+      window.removeEventListener("dragend", onDragEnd);
+      window.removeEventListener("drop", onDragEnd);
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [draggedIndex]);
 
   const { data: photos = [], isLoading } = useQuery({
     queryKey: ["portfolio-photos"],
@@ -560,7 +608,10 @@ export function PortfolioManager() {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  {/* position="popper" enables viewport-aware collision detection so the
+                      list flips upward when there isn't enough space below, preventing
+                      the last option (Portraits) from being clipped off screen. */}
+                  <SelectContent position="popper" sideOffset={4}>
                     {categories.map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         {cat}
