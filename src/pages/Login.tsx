@@ -38,24 +38,28 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      // Username lookup is exact-match in the database. Until the DB function
-      // is updated to use LOWER(), we try a handful of common case variations
-      // here so users can type their username however they like (e.g.
-      // "London26" / "london26" / "LONDON26" all resolve the same).
       const raw = formData.username.trim();
-      const variations = Array.from(new Set([
-        raw,
-        raw.toLowerCase(),
-        raw.toUpperCase(),
-        // Title Case: first char upper, rest lower — covers "London26"-style names
-        raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase(),
-      ]));
 
+      // The login field accepts either a username or an email.
+      // If the input looks like an email, use it directly. Otherwise look
+      // up the email by username, trying common case variations until the
+      // DB function is updated to do LOWER() server-side.
       let email: string | null = null;
-      for (const candidate of variations) {
-        const { data } = await supabase
-          .rpc('get_email_by_username', { _username: candidate });
-        if (data) { email = data; break; }
+
+      if (raw.includes("@")) {
+        email = raw;
+      } else {
+        const variations = Array.from(new Set([
+          raw,
+          raw.toLowerCase(),
+          raw.toUpperCase(),
+          raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase(),
+        ]));
+        for (const candidate of variations) {
+          const { data } = await supabase
+            .rpc('get_email_by_username', { _username: candidate });
+          if (data) { email = data; break; }
+        }
       }
 
       if (!email) {
@@ -103,7 +107,7 @@ export default function Login() {
           <div className="bg-card p-8 rounded-lg shadow-soft">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="username">Username or Email</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -113,7 +117,7 @@ export default function Login() {
                     onChange={(e) =>
                       setFormData({ ...formData, username: e.target.value })
                     }
-                    placeholder="Enter your username"
+                    placeholder="Username or email address"
                     required
                     className="pl-10 border-border focus:border-primary"
                   />
