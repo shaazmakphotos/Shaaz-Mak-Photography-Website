@@ -162,10 +162,11 @@ export function PortfolioManager() {
   const addMutation = useMutation({
     mutationFn: async ({ uploads, alt }: { uploads: PendingUpload[]; alt: string }) => {
       const maxOrder = photos.length > 0 ? Math.max(...photos.map((p) => p.sort_order)) + 1 : 0;
+      // preview_url omitted — column not in live DB schema yet. See
+      // add_image_variants migration; frontend falls back to url meanwhile.
       const inserts = uploads.map((u, index) => ({
         url: u.url,
         thumbnail_url: u.thumbnail_url,
-        preview_url: u.preview_url,
         width: u.width,
         height: u.height,
         category: u.category,

@@ -91,13 +91,16 @@ export function PhotoUpload() {
         // New pipeline: upload original + generate WebP variants via Edge Function.
         const processed = await uploadAndProcessPhoto(file, albumId);
 
+        // NOTE: preview_url is omitted because the column migration hasn't
+        // been applied to the live DB yet. The frontend falls back to url
+        // when preview_url is missing, so this is safe. Once the
+        // 20260408000000_add_image_variants migration runs, add it back.
         const { error: insertError } = await supabase
           .from('photos')
           .insert({
             album_id: albumId,
             url: processed.url,
             thumbnail_url: processed.thumbnail_url,
-            preview_url: processed.preview_url,
             sort_order: photos.length + uploadedCount,
             width: processed.width,
             height: processed.height,
