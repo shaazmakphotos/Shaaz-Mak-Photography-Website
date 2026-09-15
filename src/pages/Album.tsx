@@ -15,12 +15,15 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { gridSrc, lightboxSrc, measureSrc, toGridPhoto } from "@/lib/photoUrls";
+import { renderAlbumImage } from "@/components/album/renderAlbumImage";
 import type { User } from "@supabase/supabase-js";
 
 interface Photo {
   id: string;
   url: string;
   thumbnail_url: string | null;
+  preview_url?: string | null;
   title: string | null;
   sort_order: number;
   width?: number;
@@ -33,16 +36,6 @@ interface Album {
   description: string | null;
   event_date: string | null;
 }
-
-// Helper to get image dimensions from a URL
-const getImageDimensions = (url: string): Promise<{ width: number; height: number }> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    img.onerror = () => resolve({ width: 1000, height: 1000 });
-    img.src = url;
-  });
-};
 
 export default function AlbumPage() {
   const { id } = useParams<{ id: string }>();
@@ -85,8 +78,11 @@ export default function AlbumPage() {
     }
   }, [user, id]);
 
-  // Load dimensions for photos
+  // Prefer stored dimensions. Only probe a real variant URL when missing —
+  // never load a full-res original just to learn aspect ratio.
   useEffect(() => {
+    let cancelled = false;
+
     const loadDimensions = async () => {
       if (photos.length === 0) {
         setPhotosWithDimensions([]);
@@ -94,23 +90,42 @@ export default function AlbumPage() {
       }
 
       const dimensionsMap = new Map<string, { width: number; height: number }>();
+
       await Promise.all(
         photos.map(async (photo) => {
-          const dims = await getImageDimensions(photo.thumbnail_url || photo.url);
+          if (photo.width && photo.height) {
+            dimensionsMap.set(photo.id, { width: photo.width, height: photo.height });
+            return;
+          }
+          const src = measureSrc(photo);
+          if (!src) {
+            dimensionsMap.set(photo.id, { width: 1500, height: 1000 });
+            return;
+          }
+          const dims = await new Promise<{ width: number; height: number }>((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+            img.onerror = () => resolve({ width: 1500, height: 1000 });
+            img.src = src;
+          });
           dimensionsMap.set(photo.id, dims);
         })
       );
 
+      if (cancelled) return;
       setPhotosWithDimensions(
         photos.map((p) => ({
           ...p,
-          width: dimensionsMap.get(p.id)?.width || 1000,
-          height: dimensionsMap.get(p.id)?.height || 1000,
+          width: dimensionsMap.get(p.id)?.width || p.width || 1500,
+          height: dimensionsMap.get(p.id)?.height || p.height || 1000,
         }))
       );
     };
 
     loadDimensions();
+    return () => {
+      cancelled = true;
+    };
   }, [photos]);
 
   const fetchAlbum = async () => {
@@ -229,19 +244,15 @@ export default function AlbumPage() {
     }
   };
 
-  // Transform to react-photo-album format
-  const albumPhotos = photosWithDimensions.map((img) => ({
-    src: img.thumbnail_url || img.url,
-    width: img.width || 1000,
-    height: img.height || 1000,
-    alt: img.title || "Photo",
-    key: img.id,
-  }));
+  // Grid: real thumbnails only — never the download original.
+  const albumPhotos = photosWithDimensions.map((img) =>
+    toGridPhoto(img, img.width && img.height ? { w: img.width, h: img.height } : null)
+  );
 
-  // Transform for lightbox (use full URL)
-  const lightboxImages = photosWithDimensions.map((p) => ({ 
-    src: p.url, 
-    alt: p.title || "Photo" 
+  // Lightbox: preview → thumb → original (last resort when opened).
+  const lightboxImages = photosWithDimensions.map((p) => ({
+    src: lightboxSrc(p),
+    alt: p.title || "Photo",
   }));
 
   return (
@@ -346,11 +357,20 @@ export default function AlbumPage() {
                   )}
                   onClick={() => togglePhotoSelection(photo.id)}
                 >
-                  <img
-                    src={photo.thumbnail_url || photo.url}
-                    alt={photo.title || "Photo"}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
+                  {gridSrc(photo) ? (
+                    <img
+                      src={gridSrc(photo)!}
+                      alt={photo.title || "Photo"}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div
+                      className="w-full h-full bg-muted/50 animate-pulse"
+                      aria-label={photo.title || "Photo processing"}
+                    />
+                  )}
                   <div
                     className={cn(
                       "absolute top-3 right-3 w-6 h-6 flex items-center justify-center transition-all",
@@ -375,12 +395,15 @@ export default function AlbumPage() {
               rowConstraints={{ minPhotos: 1, maxPhotos: 4 }}
               spacing={8}
               onClick={({ index }) => setSelectedIndex(index)}
+              render={{ image: renderAlbumImage }}
               componentsProps={{
                 container: { className: "cursor-pointer" },
-                image: { 
-                  className: "transition-transform duration-500 hover:scale-[1.02]",
-                  loading: "lazy"
-                },
+              }}
+              sizes={{
+                size: "1100px",
+                sizes: [
+                  { viewport: "(max-width: 1024px)", size: "calc(100vw - 48px)" },
+                ],
               }}
             />
           )}

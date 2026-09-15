@@ -10,13 +10,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { Layout } from "@/components/layout/Layout";
 import { Lightbox } from "@/components/portfolio/Lightbox";
 import { downloadAlbumAsZip, DownloadProgress } from "@/lib/downloadHelper";
-import { cdn, srcset } from "@/lib/cdn";
+import { lightboxSrc, measureSrc, toGridPhoto } from "@/lib/photoUrls";
+import { renderAlbumImage } from "@/components/album/renderAlbumImage";
 
 interface Photo {
   id: string;
   url: string;
   thumbnail_url: string | null;
-  preview_url: string | null;
+  preview_url?: string | null;
   title: string | null;
   sort_order: number | null;
   width: number | null;
@@ -187,34 +188,28 @@ export default function MyAlbum() {
     });
   };
 
-  // Measure dimensions client-side for legacy photos that lack stored values.
+  // Measure dimensions only from a real variant — never pull a full-res original
+  // just to learn aspect ratio (stored width/height cover most rows).
   const [measuredDims, setMeasuredDims] = useState<Record<string, { w: number; h: number }>>({});
   useEffect(() => {
     const missing = photos.filter((p) => !p.width || !p.height);
     if (missing.length === 0) return;
     missing.forEach((p) => {
+      const src = measureSrc(p);
+      if (!src) return;
       const el = new Image();
       el.onload = () =>
         setMeasuredDims((prev) => ({ ...prev, [p.id]: { w: el.naturalWidth, h: el.naturalHeight } }));
-      el.src = p.thumbnail_url || p.url;
+      el.src = src;
     });
   }, [photos]);
 
-  // Transform to react-photo-album format
-  const albumPhotos = photos.map((img) => {
-    const measured = measuredDims[img.id];
-    return {
-      src: cdn(img.thumbnail_url || img.url),
-      width:  img.width  || measured?.w || 1500,
-      height: img.height || measured?.h || 1000,
-      alt: img.title || "Photo",
-      key: img.id,
-    };
-  });
+  // Grid: real thumbnails (+ srcSet) only. Never load the download original here.
+  const albumPhotos = photos.map((img) => toGridPhoto(img, measuredDims[img.id]));
 
-  // Lightbox uses preview_url for fast viewing; downloads still hit `url` (full-res original).
+  // Lightbox: preview → thumb → original (last resort when opened). Downloads still use `url`.
   const lightboxImages = photos.map((p) => ({
-    src: cdn(p.preview_url || p.url),
+    src: lightboxSrc(p),
     alt: p.title || "Photo",
   }));
 
@@ -364,12 +359,15 @@ export default function MyAlbum() {
                         rowConstraints={{ minPhotos: 1, maxPhotos: 4 }}
                         spacing={8}
                         onClick={({ index }) => setSelectedIndex(index)}
+                        render={{ image: renderAlbumImage }}
                         componentsProps={{
                           container: { className: "cursor-pointer" },
-                          image: { 
-                            className: "transition-transform duration-500 hover:scale-[1.02]",
-                            loading: "lazy"
-                          },
+                        }}
+                        sizes={{
+                          size: "900px",
+                          sizes: [
+                            { viewport: "(max-width: 1024px)", size: "calc(100vw - 48px)" },
+                          ],
                         }}
                       />
                     )}

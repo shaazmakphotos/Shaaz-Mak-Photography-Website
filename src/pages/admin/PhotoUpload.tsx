@@ -13,7 +13,7 @@ interface Photo {
   id: string;
   url: string;
   thumbnail_url: string | null;
-  preview_url: string | null;
+  preview_url?: string | null;
   title: string | null;
   sort_order: number | null;
   width: number | null;
@@ -87,14 +87,17 @@ export function PhotoUpload() {
     let uploadedCount = 0;
 
     try {
+      let missingVariants = 0;
       for (const file of Array.from(files)) {
         // New pipeline: upload original + generate WebP variants via Edge Function.
         const processed = await uploadAndProcessPhoto(file, albumId);
+        if (!processed.variantsReady) missingVariants++;
 
         // NOTE: preview_url is omitted because the column migration hasn't
-        // been applied to the live DB yet. The frontend falls back to url
-        // when preview_url is missing, so this is safe. Once the
-        // 20260408000000_add_image_variants migration runs, add it back.
+        // been applied to the live DB yet. Once
+        // 20260408000000_add_image_variants is applied, add preview_url back.
+        // thumbnail_url is null when process-upload is down — grids show a
+        // placeholder instead of silently loading the full-res original.
         const { error: insertError } = await supabase
           .from('photos')
           .insert({
@@ -112,10 +115,20 @@ export function PhotoUpload() {
         setUploadProgress(Math.round((uploadedCount / totalFiles) * 100));
       }
 
-      toast({
-        title: "Upload complete!",
-        description: `${uploadedCount} photo(s) uploaded successfully.`,
-      });
+      if (missingVariants > 0) {
+        toast({
+          title: "Upload complete — thumbnails pending",
+          description:
+            `${uploadedCount} photo(s) saved, but ${missingVariants} are missing WebP variants. ` +
+            "Deploy the process-upload function, then use Admin → Reprocess images.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Upload complete!",
+          description: `${uploadedCount} photo(s) uploaded successfully.`,
+        });
+      }
 
       fetchAlbumAndPhotos();
     } catch (error: any) {
@@ -265,6 +278,8 @@ export function PhotoUpload() {
   // Transform photos for react-photo-album. Dimensions come straight from the
   // database now (process-upload writes them on insert), so there is no
   // runtime probe and no layout shift.
+  // Admin grid may fall back to the original so newly uploaded photos remain
+  // visible before process-upload/backfill finishes. Client galleries never do this.
   const albumPhotos = photos.map((photo, index) => ({
     src: cdn(photo.thumbnail_url || photo.url),
     width: photo.width || 1000,

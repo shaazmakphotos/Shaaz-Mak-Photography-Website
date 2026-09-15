@@ -4,13 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { X, Camera, ChevronLeft, ChevronRight } from "lucide-react";
 import { RowsPhotoAlbum } from "react-photo-album";
 import "react-photo-album/rows.css";
-import { cdn, srcset } from "@/lib/cdn";
+import { lightboxSrc, measureSrc, toGridPhoto } from "@/lib/photoUrls";
+import { renderAlbumImage } from "@/components/album/renderAlbumImage";
 
 interface Photo {
   id: string;
   url: string;
   thumbnail_url: string | null;
-  preview_url: string | null;
+  preview_url?: string | null;
   title: string | null;
   width: number | null;
   height: number | null;
@@ -73,32 +74,27 @@ export default function SharedAlbum() {
 
   const photos = shareData?.photos ?? [];
 
-  // Measure dimensions client-side for legacy photos that lack stored values.
+  // Measure dimensions only from a real variant — never pull a full-res original.
   const [measuredDims, setMeasuredDims] = useState<Record<string, { w: number; h: number }>>({});
   useEffect(() => {
     const missing = photos.filter((p) => !p.width || !p.height);
     if (missing.length === 0) return;
     missing.forEach((p) => {
+      const src = measureSrc(p);
+      if (!src) return;
       const el = new Image();
       el.onload = () =>
         setMeasuredDims((prev) => ({ ...prev, [p.id]: { w: el.naturalWidth, h: el.naturalHeight } }));
-      el.src = p.thumbnail_url || p.url;
+      el.src = src;
     });
   }, [photos]);
 
-  const albumPhotos = photos.map((photo) => {
-    const measured = measuredDims[photo.id];
-    return {
-      src: cdn(photo.thumbnail_url || photo.url),
-      width:  photo.width  || measured?.w || 1500,
-      height: photo.height || measured?.h || 1000,
-      alt: photo.title || "Photo",
-    };
-  });
+  // Grid: real thumbnails only. Never load the download original here.
+  const albumPhotos = photos.map((photo) => toGridPhoto(photo, measuredDims[photo.id]));
 
-  // Lightbox uses preview_url for fast viewing.
+  // Lightbox: preview → thumb → original (last resort when opened).
   const lightboxImages = photos.map((photo) => ({
-    src: cdn(photo.preview_url || photo.url),
+    src: lightboxSrc(photo),
     alt: photo.title || "Photo",
   }));
 
@@ -205,12 +201,15 @@ export default function SharedAlbum() {
               rowConstraints={{ minPhotos: 1, maxPhotos: 4 }}
               spacing={8}
               onClick={({ index }) => setLightboxIndex(index)}
+              render={{ image: renderAlbumImage }}
               componentsProps={{
                 container: { className: "cursor-pointer" },
-                image: { 
-                  className: "transition-transform duration-500 hover:scale-[1.02]",
-                  loading: "lazy"
-                },
+              }}
+              sizes={{
+                size: "1100px",
+                sizes: [
+                  { viewport: "(max-width: 1024px)", size: "calc(100vw - 48px)" },
+                ],
               }}
             />
           )}
