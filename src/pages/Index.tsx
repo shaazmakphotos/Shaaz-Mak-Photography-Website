@@ -18,7 +18,7 @@ interface HomepagePhoto {
   id: string;
   url: string;
   thumbnail_url: string | null;
-  preview_url: string | null;
+  preview_url?: string | null;
   alt: string;
   sort_order: number;
   width: number | null;

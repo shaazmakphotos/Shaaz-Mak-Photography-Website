@@ -349,7 +349,14 @@ export function PortfolioManager() {
         uploaded.push({ ...processed, category: defaultCategory });
       }
       setPendingUploads((prev) => [...prev, ...uploaded]);
-      toast.success(`${uploaded.length} image(s) uploaded — now pick a category for each`);
+      const missing = uploaded.filter((u) => !u.variantsReady).length;
+      if (missing > 0) {
+        toast.error(
+          `${uploaded.length} uploaded (pick categories), but ${missing} missing WebP variants. Deploy process-upload, then Admin → Reprocess images.`
+        );
+      } else {
+        toast.success(`${uploaded.length} image(s) uploaded — now pick a category for each`);
+      }
     } catch (error: any) {
       toast.error(error?.message || "Failed to upload images");
     } finally {
@@ -465,7 +472,7 @@ export function PortfolioManager() {
                             <X className="w-3 h-3" />
                           </button>
                           <img
-                            src={cdn(u.thumbnail_url)}
+                            src={cdn(u.thumbnail_url || u.url)}
                             alt={`Preview ${idx + 1}`}
                             className="w-full h-24 object-cover rounded-lg"
                           />

@@ -109,7 +109,7 @@ serve(async (req) => {
       // Fetch all photos from album
       const { data: allPhotos, error: photosError } = await supabase
         .from('photos')
-        .select('id, url, thumbnail_url, title')
+        .select('id, url, thumbnail_url, title, width, height')
         .eq('album_id', shareLink.album_id)
         .order('sort_order', { ascending: true });
 
@@ -125,7 +125,7 @@ serve(async (req) => {
       // Fetch only selected photos
       const { data: sharedPhotos, error: sharedError } = await supabase
         .from('shared_photos')
-        .select('photos(id, url, thumbnail_url, title)')
+        .select('photos(id, url, thumbnail_url, title, width, height)')
         .eq('share_link_id', shareLink.id);
 
       if (sharedError) {

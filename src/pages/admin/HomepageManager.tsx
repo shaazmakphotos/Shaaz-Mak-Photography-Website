@@ -225,7 +225,14 @@ export function HomepageManager() {
         uploaded.push(processed);
       }
       setPendingUploads(uploaded);
-      toast.success(`${uploaded.length} image(s) uploaded`);
+      const missing = uploaded.filter((u) => !u.variantsReady).length;
+      if (missing > 0) {
+        toast.error(
+          `${uploaded.length} uploaded, but ${missing} missing WebP variants. Deploy process-upload, then Admin → Reprocess images.`
+        );
+      } else {
+        toast.success(`${uploaded.length} image(s) uploaded`);
+      }
     } catch (error: any) {
       toast.error(error?.message || "Failed to upload images");
     } finally {
@@ -284,7 +291,7 @@ export function HomepageManager() {
                   {pendingUploads.map((u, idx) => (
                     <img
                       key={idx}
-                      src={cdn(u.thumbnail_url)}
+                      src={cdn(u.thumbnail_url || u.url)}
                       alt={`Preview ${idx + 1}`}
                       className="w-full h-24 object-cover rounded-lg"
                     />

@@ -14,7 +14,7 @@ interface PortfolioPhoto {
   id: string;
   url: string;
   thumbnail_url: string | null;
-  preview_url: string | null;
+  preview_url?: string | null;
   category: string;
   alt: string;
   sort_order: number;

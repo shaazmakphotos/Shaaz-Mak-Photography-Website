@@ -8,15 +8,21 @@
 //
 // All callers should treat the original `url` as the full-resolution download
 // asset and use `thumbnail_url` / `preview_url` for on-screen rendering.
+//
+// If process-upload is unavailable we still succeed the upload, but we leave
+// thumbnail_url / preview_url null (NOT equal to the original). Client grids
+// must not treat the original as a thumbnail — see src/lib/photoUrls.ts.
 
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ProcessedUpload {
-  url: string;            // original, full-res — for downloads
-  thumbnail_url: string;  // small WebP for grid thumbnails
-  preview_url: string;    // medium WebP for gallery viewing
+  url: string;                       // original, full-res — for downloads
+  thumbnail_url: string | null;      // small WebP for grid thumbnails (null if variants unavailable)
+  preview_url: string | null;        // medium WebP for gallery viewing (null if variants unavailable)
   width: number;
   height: number;
+  /** False when process-upload did not produce variants — admin should deploy/reprocess. */
+  variantsReady: boolean;
 }
 
 function makeKey(section: string, file: File): string {
@@ -70,45 +76,54 @@ export async function uploadAndProcessPhoto(
   if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
 
   // 2. Try the process-upload Edge Function for WebP variants.
-  //    If it's not deployed (or errors out), fall back to using the original
-  //    for all sizes so uploads still succeed. Once the function is deployed
-  //    to Supabase, this path won't be hit and new uploads will get proper
-  //    thumb/preview variants.
+  //    If it's not deployed (or errors out), fall back to original-only
+  //    storage with NULL variant URLs so grids never load full-res as thumbs.
   try {
     const { data, error: fnErr } = await supabase.functions.invoke("process-upload", {
       body: { sourcePath },
     });
     if (!fnErr && data && !data.error && data.url) {
+      const thumb = data.thumbnail_url || null;
+      const preview = data.preview_url || null;
+      // Guard against a buggy function returning the original as "thumb".
+      const thumbOk = thumb && thumb !== data.url;
+      const previewOk = preview && preview !== data.url;
       return {
         url: data.url,
-        thumbnail_url: data.thumbnail_url,
-        preview_url: data.preview_url,
+        thumbnail_url: thumbOk ? thumb : null,
+        preview_url: previewOk ? preview : null,
         width: data.width,
         height: data.height,
+        variantsReady: Boolean(thumbOk),
       };
     }
     // If we got here, the function returned an error or no data — log and fall through.
     console.warn(
-      "[uploadAndProcessPhoto] process-upload unavailable, falling back to original-only:",
+      "[uploadAndProcessPhoto] process-upload unavailable — uploaded original only. " +
+        "Deploy `process-upload`, then run Admin → Reprocess images (backfill-variants). " +
+        "Reason:",
       fnErr?.message || data?.error || "no data"
     );
   } catch (err) {
     console.warn(
-      "[uploadAndProcessPhoto] process-upload threw, falling back to original-only:",
+      "[uploadAndProcessPhoto] process-upload threw — uploaded original only. " +
+        "Deploy `process-upload`, then run Admin → Reprocess images (backfill-variants). " +
+        "Error:",
       err
     );
   }
 
-  // Fallback: use the original file URL for thumb/preview as well. Image grids
-  // will still render — just heavier. Dimensions come from the client.
+  // Fallback: keep the original for downloads, leave variants null so the
+  // frontend shows a placeholder in grids instead of silently loading full-res.
   const { data: pub } = supabase.storage.from("photos").getPublicUrl(sourcePath);
   const publicUrl = pub.publicUrl;
   const dims = await measureDimensions(file).catch(() => ({ width: 1500, height: 1000 }));
   return {
     url: publicUrl,
-    thumbnail_url: publicUrl,
-    preview_url: publicUrl,
+    thumbnail_url: null,
+    preview_url: null,
     width: dims.width,
     height: dims.height,
+    variantsReady: false,
   };
 }
