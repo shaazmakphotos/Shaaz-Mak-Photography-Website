@@ -5,6 +5,7 @@ import type { AlbumPhotoForGrid } from "@/lib/photoUrls";
  * react-photo-album image renderer that:
  *  - never loads a full-res original in the grid
  *  - shows a muted placeholder when variants are missing (deferred)
+ *  - sizes the <img> to the album cell (required by react-photo-album)
  *  - passes through srcSet/sizes + lazy loading when a real thumb exists
  */
 export function renderAlbumImage(
@@ -21,8 +22,9 @@ export function renderAlbumImage(
         title={title || alt || "Preview generating…"}
         className="w-full h-full bg-muted/50 animate-pulse"
         style={{
-          width: "100%",
-          aspectRatio: `${width} / ${height}`,
+          width,
+          height,
+          display: "block",
         }}
       />
     );
@@ -37,6 +39,14 @@ export function renderAlbumImage(
       title={title}
       loading="lazy"
       decoding="async"
+      width={width}
+      height={height}
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        display: "block",
+      }}
       className="transition-transform duration-500 hover:scale-[1.02]"
     />
   );

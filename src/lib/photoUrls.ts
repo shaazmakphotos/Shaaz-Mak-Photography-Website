@@ -113,22 +113,22 @@ export function toGridPhoto(
   }
 
   // Same aspect ratio for every srcSet entry (required by react-photo-album).
+  // Prefer preview as default `src` when present so large grid cells don't
+  // upscale a soft 480px thumb (looked washed-out / low-res on desktop).
   const thumbH = Math.max(1, Math.round((THUMB_MAX_EDGE * height) / width));
+  const hasPreview = isRealVariant(photo.preview_url, photo.url);
+  const preview = hasPreview ? cdn(photo.preview_url!) : null;
+  const previewH = Math.max(1, Math.round((PREVIEW_MAX_EDGE * height) / width));
+
   const srcSet: Array<{ src: string; width: number; height: number }> = [
     { src: thumb, width: THUMB_MAX_EDGE, height: thumbH },
   ];
-
-  if (isRealVariant(photo.preview_url, photo.url)) {
-    const previewH = Math.max(1, Math.round((PREVIEW_MAX_EDGE * height) / width));
-    srcSet.push({
-      src: cdn(photo.preview_url!),
-      width: PREVIEW_MAX_EDGE,
-      height: previewH,
-    });
+  if (preview) {
+    srcSet.push({ src: preview, width: PREVIEW_MAX_EDGE, height: previewH });
   }
 
   return {
-    src: thumb,
+    src: preview ?? thumb,
     width,
     height,
     alt,
